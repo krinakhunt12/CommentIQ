@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+/* 
+  Most styles have been migrated to the Tailwind utility classes in the components.
+  This file is kept for global transitions or utility overrides if needed.
+*/
+
+.main-content {
+  min-height: calc(100vh - 200px);
+}
