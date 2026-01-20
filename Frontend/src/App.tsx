@@ -1,14 +1,25 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Terminal, ChevronRight, RotateCcw, ShieldCheck, Layers, BookOpen } from 'lucide-react';
+import {
+  Sparkles,
+  Terminal,
+  ChevronRight,
+  RotateCcw,
+  ShieldCheck,
+  Layers,
+  FileDown,
+  LayoutDashboard,
+  LayoutGrid
+} from 'lucide-react';
 import type { AnalysisResult, ProjectAnalysisResult } from './types';
 import FileUpload from './components/FileUpload';
 import AnalysisSummary from './components/AnalysisSummary';
 import CommentCard from './components/CommentCard';
 import ProjectSidebar from './components/ProjectSidebar';
 import LandingPage from './components/LandingPage';
-import { cn } from './utils';
+import ProjectDashboard from './components/ProjectDashboard';
+import { cn, downloadAuditReport } from './utils';
 import './App.css';
 
 const App: React.FC = () => {
@@ -17,7 +28,7 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [projectResult, setProjectResult] = useState<ProjectAnalysisResult | null>(null);
-  const [activeFileIdx, setActiveFileIdx] = useState<number>(0);
+  const [activeFileIdx, setActiveFileIdx] = useState<number | 'dashboard'>('dashboard');
   const [error, setError] = useState<string>('');
 
   const handleFileSelect = (selectedFile: File) => {
@@ -31,7 +42,7 @@ const App: React.FC = () => {
 
   const handleAnalyze = async () => {
     if (!file) {
-      setError('Please select a file or .zip repository first');
+      setError('Module selection required. Please upload a source file or repository.');
       return;
     }
 
@@ -57,12 +68,13 @@ const App: React.FC = () => {
 
       if (isZip) {
         setProjectResult(response.data as ProjectAnalysisResult);
-        setActiveFileIdx(0);
+        setActiveFileIdx('dashboard');
       } else {
         setResult(response.data as AnalysisResult);
+        setActiveFileIdx(0);
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Error connecting to analysis engine. Verify backend is running.');
+      setError(err.response?.data?.detail || 'Analysis engine connection failure. Check backend status.');
     } finally {
       setLoading(false);
     }
@@ -75,7 +87,9 @@ const App: React.FC = () => {
     setError('');
   };
 
-  const currentResult = projectResult ? projectResult.files[activeFileIdx] : result;
+  const currentResult = projectResult
+    ? (activeFileIdx === 'dashboard' ? null : projectResult.files[activeFileIdx as number])
+    : result;
 
   if (!showApp) {
     return <LandingPage onLaunch={() => {
@@ -85,63 +99,67 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden">
-      {/* Dynamic Background */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-200/20 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-200/20 rounded-full blur-[120px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-30 pointer-events-none bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]" />
-      </div>
-
-      <header className="relative z-50 py-8 px-6 backdrop-blur-md bg-white/70 border-b border-slate-100 sticky top-0">
+    <div className="min-h-screen bg-white text-slate-900 selection:bg-violet-100 selection:text-violet-900">
+      <header className="relative z-50 py-6 px-6 bg-white border-b border-slate-100 sticky top-0">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setShowApp(false)}>
-            <div className="p-2 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl shadow-lg shadow-indigo-200">
-              <Sparkles size={22} className="text-white" />
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setShowApp(false)}>
+            <div className="p-1.5 bg-slate-900 text-white rounded-sm">
+              <Sparkles size={18} />
             </div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-900">
-              QualityCheck
+            <h1 className="text-lg font-bold tracking-tight uppercase text-slate-900">
+              CommentIQ
             </h1>
           </div>
 
           <div className="flex items-center gap-4">
-            <a href="https://github.com" target="_blank" className="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
-              <BookOpen size={20} />
-            </a>
+            {(projectResult || result) && (
+              <button
+                onClick={() => downloadAuditReport(projectResult || result!)}
+                className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-600 border border-slate-200 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all active:scale-95"
+              >
+                <FileDown size={14} />
+                <span>Export Audit</span>
+              </button>
+            )}
+
             <button
               onClick={() => setShowApp(false)}
-              className="text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors"
+              className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 hover:text-violet-600 transition-colors px-2"
             >
-              Back to Home
+              Exit
             </button>
+            <div className="w-px h-4 bg-slate-100" />
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase text-slate-400 tracking-widest bg-slate-50 px-3 py-1 border border-slate-100">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live Audit
+            </div>
           </div>
         </div>
       </header>
 
       <main className="relative z-10 py-12 px-6">
         <div className={cn(
-          "mx-auto transition-all duration-500 ease-in-out",
-          projectResult ? "max-w-[1400px]" : "max-w-4xl"
+          "mx-auto transition-all duration-300",
+          projectResult ? "max-w-[1400px]" : "max-w-3xl"
         )}>
 
           <AnimatePresence mode="wait">
-            {!currentResult ? (
+            {!projectResult && !result ? (
               <motion.div
                 key="upload"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                className="bg-white rounded-3xl p-8 md:p-12 shadow-xl shadow-slate-200/50 border border-slate-100"
+                exit={{ opacity: 0 }}
+                className="bg-white p-10 lg:p-16 border border-slate-200"
               >
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-                  <div className="space-y-2 text-center md:text-left">
-                    <div className="inline-flex items-center gap-2 text-indigo-600 font-black uppercase text-xs tracking-[0.2em]">
-                      <Terminal size={14} />
-                      <span>Input Terminal</span>
-                    </div>
-                    <h2 className="text-3xl font-black text-slate-800">New Code Audit</h2>
-                    <p className="text-slate-500">Analyze a module or drop a full ZIP repository.</p>
+                <div className="flex flex-col gap-2 mb-12 items-center text-center">
+                  <div className="inline-flex items-center gap-2 text-violet-600 font-bold uppercase text-[10px] tracking-[0.3em]">
+                    <Terminal size={12} />
+                    <span>Deployment Terminal</span>
                   </div>
+                  <h2 className="text-4xl font-bold text-slate-900 tracking-tighter uppercase">Initialize Scan</h2>
+                  <div className="h-0.5 w-12 bg-violet-600 my-2" />
+                  <p className="text-slate-500 text-sm max-w-sm">Provide a single source module or a compressed project archive for evaluation.</p>
                 </div>
 
                 <FileUpload
@@ -152,13 +170,11 @@ const App: React.FC = () => {
 
                 {error && (
                   <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-4 text-rose-800 text-sm font-semibold mb-8"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="p-4 bg-rose-50 border border-rose-100 flex items-center gap-4 text-rose-800 text-xs font-bold mb-8 uppercase tracking-wide"
                   >
-                    <div className="p-2 bg-rose-500 text-white rounded-xl">
-                      <ShieldCheck size={18} />
-                    </div>
+                    <ShieldCheck size={16} />
                     <span>{error}</span>
                   </motion.div>
                 )}
@@ -167,21 +183,21 @@ const App: React.FC = () => {
                   onClick={handleAnalyze}
                   disabled={!file || loading}
                   className={cn(
-                    "w-full py-5 rounded-2xl text-lg font-black transition-all flex items-center justify-center gap-3 relative overflow-hidden group shadow-lg ring-offset-2 focus:ring-2 ring-indigo-500",
+                    "w-full py-5 text-sm font-bold uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-4",
                     !file || loading
-                      ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
-                      : "bg-indigo-600 text-white hover:bg-slate-900 active:scale-[0.98] shadow-indigo-100"
+                      ? "bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-200"
+                      : "bg-slate-900 text-white hover:bg-violet-700 active:scale-[0.99]"
                   )}
                 >
                   {loading ? (
                     <div className="flex items-center gap-4">
-                      <div className="w-6 h-6 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-                      <span>Syncing Brain...</span>
+                      <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                      <span>Processing Payload...</span>
                     </div>
                   ) : (
                     <>
-                      <span>Examine Documentation</span>
-                      <ChevronRight size={22} className="group-hover:translate-x-1 transition-transform" />
+                      <span>Execute Audit</span>
+                      <ChevronRight size={18} />
                     </>
                   )}
                 </button>
@@ -194,56 +210,80 @@ const App: React.FC = () => {
                 className="flex flex-col lg:flex-row gap-8 items-start"
               >
                 {projectResult && (
-                  <ProjectSidebar
-                    files={projectResult.files}
-                    activeFile={currentResult.file_name}
-                    onFileSelect={(name) => {
-                      const idx = projectResult.files.findIndex(f => f.file_name === name);
-                      if (idx !== -1) setActiveFileIdx(idx);
-                    }}
-                  />
+                  <div className="w-full lg:w-72 space-y-4 sticky top-28">
+                    <button
+                      onClick={() => setActiveFileIdx('dashboard')}
+                      className={cn(
+                        "w-full flex items-center gap-3 p-4 transition-all text-left border border-slate-200 uppercase font-black text-[10px] tracking-widest",
+                        activeFileIdx === 'dashboard' ? "bg-slate-900 text-white" : "bg-white text-slate-500 hover:bg-slate-50"
+                      )}
+                    >
+                      <LayoutDashboard size={14} />
+                      <span>Intelligence Overview</span>
+                    </button>
+
+                    <ProjectSidebar
+                      files={projectResult.files}
+                      activeFile={activeFileIdx === 'dashboard' ? null : projectResult.files[activeFileIdx as number].file_name}
+                      onFileSelect={(name) => {
+                        const idx = projectResult.files.findIndex(f => f.file_name === name);
+                        if (idx !== -1) setActiveFileIdx(idx);
+                      }}
+                    />
+                  </div>
                 )}
 
                 <div className="flex-1 min-w-0 w-full space-y-8">
-                  <div className="flex flex-wrap items-center justify-between gap-4 sticky top-28 z-20 backdrop-blur-md bg-white/70 p-4 rounded-2xl border border-slate-100 shadow-sm">
+                  {/* Result Header */}
+                  <div className="flex flex-wrap items-center justify-between gap-4 sticky top-24 z-20 bg-white/95 backdrop-blur-sm p-4 border border-slate-200">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-slate-100 text-slate-600 rounded-xl">
-                        <Layers size={18} />
+                      <div className="p-2 bg-slate-900 text-white rounded-sm">
+                        {activeFileIdx === 'dashboard' ? <LayoutDashboard size={16} /> : <Layers size={16} />}
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-black uppercase text-indigo-600 mb-0.5">Active Scope</span>
-                        <strong className="text-slate-800 truncate block max-w-[200px] md:max-w-md">
-                          {projectResult ? projectResult.project_name : currentResult.file_name}
+                        <span className="text-[10px] font-black uppercase text-violet-600 tracking-widest mb-0.5 leading-none">
+                          {activeFileIdx === 'dashboard' ? 'Insight View' : 'Target Scope'}
+                        </span>
+                        <strong className="text-slate-800 font-bold truncate block max-w-[200px] md:max-w-md uppercase tracking-tighter">
+                          {activeFileIdx === 'dashboard' ? 'Project Dashboard' : (currentResult?.file_name || 'Analysis Output')}
                         </strong>
                       </div>
                     </div>
                     <button
                       onClick={reset}
-                      className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-sm font-bold hover:bg-indigo-100 transition-all active:scale-95 border border-indigo-100"
+                      className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-900 text-slate-900 text-[10px] font-bold uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all active:scale-95"
                     >
-                      <RotateCcw size={16} />
-                      <span>New Audit</span>
+                      <RotateCcw size={14} />
+                      <span>Release Modules</span>
                     </button>
                   </div>
 
-                  <AnalysisSummary result={currentResult} />
+                  {activeFileIdx === 'dashboard' && projectResult ? (
+                    <ProjectDashboard project={projectResult} onFileSelect={(idx) => setActiveFileIdx(idx)} />
+                  ) : (
+                    <>
+                      {currentResult && <AnalysisSummary result={currentResult} />}
 
-                  <div className="py-6 border-b border-slate-200">
-                    <h2 className="text-2xl font-black text-slate-800">Comment Inspection</h2>
-                    <p className="text-slate-500 text-sm">Automated clarity scores for {currentResult.file_name}.</p>
-                  </div>
+                      {currentResult && (
+                        <div className="py-8 border-y border-slate-100 space-y-2">
+                          <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em]">Documentation Catalog</h2>
+                          <p className="text-slate-900 text-xl font-bold tracking-tight uppercase">Audit findings for {currentResult.file_name.split('/').pop()}</p>
+                        </div>
+                      )}
 
-                  <div className="space-y-4">
-                    {currentResult.comments.map((comment, idx) => (
-                      <CommentCard key={`${currentResult.file_name}-${idx}`} comment={comment} />
-                    ))}
+                      <div className="space-y-4">
+                        {currentResult?.comments.map((comment, idx) => (
+                          <CommentCard key={`${currentResult.file_name}-${idx}`} comment={comment} />
+                        ))}
 
-                    {currentResult.comments.length === 0 && (
-                      <div className="bg-white rounded-3xl p-20 text-center border-2 border-dashed border-slate-100">
-                        <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No comments found to inspect.</p>
+                        {currentResult?.comments.length === 0 && (
+                          <div className="py-24 text-center border border-slate-100 bg-slate-50/50">
+                            <p className="text-slate-400 font-bold uppercase tracking-[0.4em] text-[10px]">Zero Comment Anomalies Detected</p>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </>
+                  )}
                 </div>
               </motion.div>
             )}
@@ -251,8 +291,8 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <footer className="relative z-10 py-12 text-center text-slate-400 border-t border-slate-100">
-        <p className="text-[10px] font-black tracking-[0.3em] uppercase">© QualityCheck Intelligence Framework</p>
+      <footer className="relative z-10 py-16 text-center text-slate-300 border-t border-slate-50">
+        <p className="text-[10px] font-bold tracking-[0.4em] uppercase">© 2026 CommentIQ Intelligence | Encrypted Audit</p>
       </footer>
     </div>
   );

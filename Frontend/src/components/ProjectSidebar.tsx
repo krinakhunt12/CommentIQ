@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileCode, ChevronRight, LayoutGrid } from 'lucide-react';
+import { FileCode, LayoutGrid, AlertCircle, ShieldAlert } from 'lucide-react';
 import type { AnalysisResult } from '../types';
 import { cn, getScoreColor } from '../utils';
 
@@ -11,60 +11,70 @@ interface Props {
 
 const ProjectSidebar: React.FC<Props> = ({ files, activeFile, onFileSelect }) => {
     return (
-        <div className="w-full lg:w-72 bg-white border border-slate-200 lg:h-[calc(100vh-140px)] flex flex-col rounded-2xl overflow-hidden shadow-sm sticky top-6">
-            <div className="p-4 flex items-center gap-3 font-bold border-b border-slate-100 bg-slate-50/50 text-slate-800">
-                <div className="p-1.5 bg-indigo-100 text-indigo-600 rounded-lg">
-                    <LayoutGrid size={16} />
-                </div>
-                <span className="text-sm tracking-tight flex-1">Project Files</span>
-                <span className="bg-slate-200 px-2 py-0.5 rounded-full text-[10px] text-slate-600 font-black">
-                    {files.length}
+        <div className="w-full lg:w-72 bg-white border border-slate-200 lg:h-[calc(100vh-160px)] flex flex-col sticky top-28">
+            <div className="p-5 flex items-center gap-3 font-bold border-b border-slate-100 bg-slate-50/50 text-slate-800">
+                <LayoutGrid size={14} className="text-violet-600" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] flex-1">Project Modules</span>
+                <span className="bg-slate-200 px-1.5 py-0.5 text-[8px] text-slate-600 font-bold uppercase tracking-tighter">
+                    {files.length} Units
                 </span>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
-                {files.map((file) => (
-                    <button
-                        key={file.file_name}
-                        onClick={() => onFileSelect(file.file_name)}
-                        className={cn(
-                            'group w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 text-left relative',
-                            activeFile === file.file_name
-                                ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-100'
-                                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800 border border-transparent'
-                        )}
-                    >
-                        <div className={cn(
-                            'p-2 rounded-lg transition-colors',
-                            activeFile === file.file_name ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'
-                        )}>
-                            <FileCode size={16} />
-                        </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+                {files.map((file) => {
+                    const issueCount = file.comments.filter(c => c.quality_score < 70 || c.consistency_score < 70).length;
+                    const isHighRisk = file.overall_score < 60;
 
-                        <div className="flex-1 min-w-0">
-                            <div className="text-sm font-bold truncate leading-none mb-1">{file.file_name}</div>
-                            <div className="text-[10px] opacity-60 font-medium">
-                                {file.code_lines} lines of code
+                    return (
+                        <button
+                            key={file.file_name}
+                            onClick={() => onFileSelect(file.file_name)}
+                            className={cn(
+                                'w-full flex items-center gap-3 p-4 transition-all text-left border-b border-slate-50 last:border-0 relative',
+                                activeFile === file.file_name
+                                    ? 'bg-violet-50 text-violet-700 border-l-2 border-l-violet-600'
+                                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800 border-l-2 border-l-transparent'
+                            )}
+                        >
+                            <div className={cn(
+                                'p-1.5 transition-colors',
+                                activeFile === file.file_name ? 'text-violet-600' : 'text-slate-300'
+                            )}>
+                                {isHighRisk ? <ShieldAlert size={14} className="text-rose-500" /> : <FileCode size={14} />}
                             </div>
-                        </div>
 
-                        <div
-                            className="w-2.5 h-2.5 rounded-full ring-2 ring-white shrink-0 shadow-inner"
-                            style={{ backgroundColor: getScoreColor(file.overall_score) }}
-                            title={`Score: ${file.overall_score}%`}
-                        />
+                            <div className="flex-1 min-w-0">
+                                <div className="text-xs font-bold truncate tracking-tight mb-1 uppercase">
+                                    {file.file_name.split('/').pop()}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none">
+                                        {file.code_lines} LOC
+                                    </div>
+                                    {issueCount > 0 && (
+                                        <div className={cn(
+                                            "flex items-center gap-1 text-[8px] font-black px-1 rounded-sm",
+                                            isHighRisk ? "bg-rose-100 text-rose-600" : "bg-slate-100 text-slate-600"
+                                        )}>
+                                            <AlertCircle size={8} />
+                                            {issueCount} FAIL
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
 
-                        <ChevronRight size={14} className={cn(
-                            'transition-transform duration-200 shrink-0',
-                            activeFile === file.file_name ? 'opacity-100 translate-x-1' : 'opacity-0 -translate-x-2 group-hover:opacity-40 group-hover:translate-x-0'
-                        )} />
-                    </button>
-                ))}
-            </div>
+                            <div
+                                className="w-1.5 h-1.5 rounded-full shrink-0"
+                                style={{ backgroundColor: getScoreColor(file.overall_score) }}
+                                title={`Status: ${file.overall_score}%`}
+                            />
 
-            {/* Mobile Indicator */}
-            <div className="lg:hidden p-3 bg-indigo-50 border-t border-indigo-100 text-indigo-600 text-[10px] font-bold text-center uppercase tracking-widest">
-                Scroll to view modules
+                            {isHighRisk && (
+                                <div className="absolute top-1 right-1 w-1 h-1 bg-rose-500 rounded-full animate-ping" />
+                            )}
+                        </button>
+                    );
+                })}
             </div>
         </div>
     );

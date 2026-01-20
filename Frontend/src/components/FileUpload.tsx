@@ -36,13 +36,13 @@ const FileUpload: React.FC<Props> = ({ onFileSelect, selectedFile, loading }) =>
     };
 
     return (
-        <div className="w-full mb-8">
+        <div className="w-full mb-12">
             <div
                 className={cn(
-                    'relative w-full min-h-[200px] border-2 border-dashed rounded-2xl flex items-center justify-center transition-all duration-300 cursor-pointer',
-                    isDragging ? 'border-indigo-500 bg-indigo-50/50 scale-[1.01]' : 'border-slate-200 bg-white hover:border-indigo-400 hover:bg-slate-50/50',
-                    selectedFile && 'border-emerald-500 bg-emerald-50/30',
-                    loading && 'opacity-60 pointer-events-none'
+                    'relative w-full min-h-[220px] border border-slate-200 flex items-center justify-center transition-all duration-300 cursor-pointer',
+                    isDragging ? 'bg-violet-50 border-violet-400' : 'bg-slate-50/50 hover:bg-white hover:border-slate-400',
+                    selectedFile && 'bg-white border-emerald-500',
+                    loading && 'opacity-30 pointer-events-none'
                 )}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -57,34 +57,34 @@ const FileUpload: React.FC<Props> = ({ onFileSelect, selectedFile, loading }) =>
                     disabled={loading}
                 />
 
-                <label htmlFor="file-input" className="w-full h-full flex flex-col items-center justify-center p-8 cursor-pointer text-center">
-                    <div className="mb-4 transition-transform duration-300 group-hover:-translate-y-1">
+                <label htmlFor="file-input" className="w-full h-full flex flex-col items-center justify-center p-12 cursor-pointer text-center group">
+                    <div className="mb-6 transition-transform duration-300 group-hover:-translate-y-0.5">
                         {selectedFile ? (
-                            <CheckCircle2 className="text-emerald-500" size={48} />
+                            <CheckCircle2 className="text-emerald-500" size={40} strokeWidth={1.5} />
                         ) : (
-                            <div className="p-4 bg-indigo-100 rounded-full text-indigo-600">
-                                <FileUp size={32} />
+                            <div className="p-4 bg-white border border-slate-100 text-slate-400 group-hover:text-violet-600 group-hover:border-violet-200 transition-colors">
+                                <FileUp size={28} strokeWidth={1.5} />
                             </div>
                         )}
                     </div>
 
-                    <div className="flex flex-col items-center gap-1">
+                    <div className="flex flex-col items-center gap-1.5">
                         {selectedFile ? (
                             <>
-                                <span className="text-lg font-semibold text-slate-800 break-all px-4">{selectedFile.name}</span>
-                                <span className="text-sm text-slate-500">{(selectedFile.size / 1024).toFixed(1)} KB</span>
+                                <span className="text-sm font-bold text-slate-800 uppercase tracking-tighter break-all px-4">{selectedFile.name}</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">{(selectedFile.size / 1024).toFixed(1)} KB</span>
                             </>
                         ) : (
                             <>
-                                <span className="text-xl font-bold text-slate-800">Drop code or .zip here</span>
-                                <span className="text-slate-500">Analyze single files or full repositories</span>
+                                <span className="text-sm font-black text-slate-800 uppercase tracking-[0.2em]">Drop Target Payload</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Source modules or repository (.zip)</span>
                             </>
                         )}
                     </div>
 
                     {!selectedFile && (
-                        <div className="mt-6 px-4 py-1.5 bg-slate-100 rounded-full text-xs font-medium text-slate-600">
-                            Supports: .py, .js, .ts, .java, .cpp... and .zip
+                        <div className="mt-8 px-4 py-1.5 border border-slate-100 bg-white text-[9px] font-black uppercase tracking-[0.1em] text-slate-400 group-hover:text-slate-600 transition-colors">
+                            Compliant Formats: .py, .js, .ts, .java, .cpp ...
                         </div>
                     )}
                 </label>
