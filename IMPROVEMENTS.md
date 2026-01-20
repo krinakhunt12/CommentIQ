@@ -1,40 +1,32 @@
-# CommentIQ - Version 3.0 (Enterprise Suite)
+# CommentIQ - Version 4.0 (Real-Time Intelligence)
 
-CommentIQ has evolved from a simple quality checker into a comprehensive **Documentation Intelligence Platform**. This version introduces high-impact features designed for enterprise-scale repositories and collaborative DevOps workflows.
-
----
-
-## 🔥 New Enterprise Features (v3.0)
-
-### 1. Compliance Policy Center
-A new configuration layer that allows teams to enforce specific documentation standards.
-- **Rule Toggles**: Enable/Disable specific heuristics like "Strict JSDoc" or "Production Debt Lockdown."
-- **Severity Impact**: Rules are tied to the scoring engine, ensuring compliance directly affects the module's Quality Index.
-
-### 2. Project-Wide Semantic Search
-A specialized search engine to manage large-scale documentation debt.
-- **Cross-Module Indexing**: Query every comment and issue across thousands of files in a single session.
-- **Semantic Filtering**: Find specific debt markers (TODO, FIXME) or logic categories instantly.
-
-### 3. Direct-to-PR Git Integration (Automation)
-The bridge between auditing and remediation.
-- **Refactor Tracking**: Every edited suggestion is staged for deployment.
-- **PR Blueprints**: Generates structured PR descriptions including "Health Points" gained and a detailed summary of refactored modules.
-
-### 4. Advanced Visualization & Dashboards
-- **Documentation Heatmap**: A segmented visualization of documentation density vs function.
-- **Chronic Issues & Hotspots**: Identifies recurring architectural rot and high-risk files across the project.
-- **Semantic Integrity Alerts**: Detects "drift" where comments no longer accurately describe the surrounding code tokens.
+CommentIQ is now a high-performance, real-time documentation intelligence platform. This version transitions from static "upload-and-check" to "live-sync" auditing.
 
 ---
 
-## 🛠️ Technical Overhaul
+## ⚡ Real-Time Suite (v4.0)
 
-- **High-Contrast Design System**: Rebranded UI with a professional Violet + Slate palette, optimized for professional clarity and low eye-strain.
-- **Performance Indexing**: Optimized project analysis that handles large ZIP archives with minimal latency.
-- **Enhanced Heuristics**: Improved scoring logic that weights semantic drift (Integrity) more heavily in the final score.
+### 1. Sentinel Mode (Auto-Audit)
+- **Infrastructure**: Integrated Python `watchdog` to monitor the local OS filesystem.
+- **Workflow**: Automated save-triggered analysis. The UI reflects code quality changes in milliseconds without user intervention.
+
+### 2. The "War Room" (Collaborative Peer Review)
+- **Infrastructure**: Full-duplex WebSockets bridge for persistent team connectivity.
+- **Live Feed**: An interactive activity log updates all connected peers when documentation is refactored or debt is cleared.
+
+### 3. SSE Streaming Pipeline
+- **Infrastructure**: Server-Sent Events (SSE) via `sse-starlette`.
+- **Optimization**: ZIP uploads now stream results file-by-file, drastically improving perceived performance for large-scale enterprise project audits.
 
 ---
 
-Built for teams that take documentation as seriously as their code.
-**Version 3.0: Audit. Refactor. Deploy.**
+## 🛠️ Technical Improvements
+
+- **Connection Management**: Robust WebSocket manager handles peer discovery and broadcast logic.
+- **Asynchronous Processing**: Background tasks ensure file-watching doesn't block API responsiveness.
+- **Enhanced Design**: Added "War Room" toast alerts and pulse effects for active real-time status.
+
+---
+
+Built for the speed of modern development.
+**Version 4.0: Code. Save. Audit.**

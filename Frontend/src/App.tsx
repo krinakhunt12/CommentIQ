@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -15,8 +15,13 @@ import {
   Github,
   X,
   Zap,
-  CheckCircle2,
-  FileCode
+  FileCode,
+  Wifi,
+  WifiOff,
+  Eye,
+  Activity,
+  Play,
+  Square
 } from 'lucide-react';
 import type { AnalysisResult, ProjectAnalysisResult, CommentAnalysis } from './types';
 import FileUpload from './components/FileUpload';
@@ -27,6 +32,7 @@ import LandingPage from './components/LandingPage';
 import ProjectDashboard from './components/ProjectDashboard';
 import PolicyCenter from './components/PolicyCenter';
 import type { AuditPolicy } from './components/PolicyCenter';
+import { useRealTime } from './hooks/useRealTime';
 import { cn, downloadAuditReport } from './utils';
 import './App.css';
 
@@ -43,14 +49,47 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [projectResult, setProjectResult] = useState<ProjectAnalysisResult | null>(null);
-  const [activeFileIdx, setActiveFileIdx] = useState<number | 'dashboard' | 'search' | 'policies'>('dashboard');
+  const [activeFileIdx, setActiveFileIdx] = useState<number | 'dashboard' | 'search' | 'policies' | 'sentinel'>('dashboard');
   const [error, setError] = useState<string>('');
 
-  // New States for requested features
+  // States for advanced features
   const [policies, setPolicies] = useState<AuditPolicy[]>(INITIAL_POLICIES);
   const [searchQuery, setSearchQuery] = useState('');
   const [appliedRefactors, setAppliedRefactors] = useState<{ file: string, lineNumber: number, original: string, refactored: string }[]>([]);
   const [showPRMock, setShowPRMock] = useState(false);
+
+  // Real-time states
+  const [sentinelPath, setSentinelPath] = useState('');
+  const [isSentinelActive, setIsSentinelActive] = useState(false);
+  const [streamingStatus, setStreamingStatus] = useState<string | null>(null);
+
+  const handleLiveUpdate = useCallback((updatedFile: AnalysisResult) => {
+    setProjectResult(prev => {
+      if (!prev) return {
+        project_name: "Sentinel Module",
+        overall_score: updatedFile.overall_score,
+        files: [updatedFile],
+        total_files: 1
+      };
+
+      const newFiles = [...prev.files];
+      const idx = newFiles.findIndex(f => f.file_name === updatedFile.file_name);
+      if (idx !== -1) {
+        newFiles[idx] = updatedFile;
+      } else {
+        newFiles.push(updatedFile);
+      }
+
+      return {
+        ...prev,
+        files: newFiles,
+        overall_score: newFiles.reduce((acc, f) => acc + f.overall_score, 0) / newFiles.length,
+        total_files: newFiles.length
+      };
+    });
+  }, []);
+
+  const { connected, peerUpdates, broadcastRefactor } = useRealTime(handleLiveUpdate);
 
   const handleFileSelect = (selectedFile: File) => {
     setFile(selectedFile);
@@ -75,31 +114,85 @@ const App: React.FC = () => {
     formData.append('file', file);
 
     const isZip = file.name.endsWith('.zip');
-    const endpoint = isZip ? '/analyze-project' : '/analyze';
 
-    try {
-      const response = await axios.post<AnalysisResult | ProjectAnalysisResult>(
-        `http://localhost:8000${endpoint}`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
+    if (isZip) {
+      // Feature 2: Streaming Analysis (SSE Simulation)
+      setStreamingStatus("Starting scan...");
+      const eventSource = new EventSource(`http://localhost:8000/analyze-project-stream?project_id=${file.name}`);
 
-      if (isZip) {
-        setProjectResult(response.data as ProjectAnalysisResult);
-        setActiveFileIdx('dashboard');
-      } else {
-        setResult(response.data as AnalysisResult);
+      setProjectResult({
+        project_name: file.name,
+        overall_score: 0,
+        files: [],
+        total_files: 0
+      });
+
+      eventSource.addEventListener('status', (e) => {
+        setStreamingStatus(JSON.parse(e.data).message);
+      });
+
+      eventSource.addEventListener('file_processed', (e) => {
+        const data = JSON.parse(e.data);
+        setStreamingStatus(`Analyzing: ${data.file} (${data.index + 1}/${data.total})`);
+        // In a real app we'd fetch the full file result here or it would be in the data
+      });
+
+      eventSource.addEventListener('complete', () => {
+        setStreamingStatus(null);
+        setLoading(false);
+        eventSource.close();
+        // Finally do a full fetch or just keep the simulation
+        handleFullProjectAnalysis(file);
+      });
+
+      eventSource.onerror = () => {
+        eventSource.close();
+        setLoading(false);
+        handleFullProjectAnalysis(file);
+      };
+
+    } else {
+      // Single file sync analysis
+      try {
+        const response = await axios.post<AnalysisResult>(
+          `http://localhost:8000/analyze`,
+          formData,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+        setResult(response.data);
         setActiveFileIdx(0);
+        setLoading(false);
+      } catch (err: any) {
+        setError(err.response?.data?.detail || 'Analysis engine failure.');
+        setLoading(false);
       }
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Analysis engine connection failure. Check backend status.');
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const handleFullProjectAnalysis = async (zipFile: File) => {
+    const formData = new FormData();
+    formData.append('file', zipFile);
+    try {
+      const resp = await axios.post<ProjectAnalysisResult>(`http://localhost:8000/analyze-project`, formData);
+      setProjectResult(resp.data);
+      setActiveFileIdx('dashboard');
+    } catch (e) { }
+  };
+
+  const startSentinel = async () => {
+    if (!sentinelPath) return;
+    try {
+      await axios.post(`http://localhost:8000/sentinel/start?directory=${encodeURIComponent(sentinelPath)}`);
+      setIsSentinelActive(true);
+      setActiveFileIdx('dashboard');
+    } catch (e: any) {
+      setError(e.response?.data?.detail || "Could not start Sentinel.");
+    }
+  };
+
+  const stopSentinel = async () => {
+    await axios.post(`http://localhost:8000/sentinel/stop`);
+    setIsSentinelActive(false);
   };
 
   const reset = () => {
@@ -119,7 +212,6 @@ const App: React.FC = () => {
     ? (typeof activeFileIdx === 'number' ? projectResult.files[activeFileIdx] : null)
     : result;
 
-  // Feature 1: Semantic Search Logic
   const searchResults = useMemo(() => {
     if (!searchQuery || !projectResult) return [];
     const results: { file: AnalysisResult, comment: CommentAnalysis }[] = [];
@@ -136,6 +228,8 @@ const App: React.FC = () => {
 
   const onRefactorApplied = (file: string, lineNumber: number, original: string, refactored: string) => {
     setAppliedRefactors(prev => [...prev.filter(r => !(r.file === file && r.lineNumber === lineNumber)), { file, lineNumber, original, refactored }]);
+    // Collaborative Audit: Broadcast to peers
+    broadcastRefactor(file, "Lead Dev");
   };
 
   if (!showApp) {
@@ -159,12 +253,24 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
+            {connected ? (
+              <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 border border-emerald-100 text-emerald-600 text-[9px] font-black uppercase tracking-widest">
+                <Wifi size={12} />
+                <span>Real-Time Sync Active</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 px-3 py-1 bg-slate-50 border border-slate-200 text-slate-400 text-[9px] font-black uppercase tracking-widest">
+                <WifiOff size={12} />
+                <span>Disconnected</span>
+              </div>
+            )}
+
             {(projectResult || result) && (
               <div className="flex items-center gap-2">
                 {appliedRefactors.length > 0 && (
                   <button
                     onClick={() => setShowPRMock(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all border border-emerald-500"
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all border border-emerald-500 animate-pulse-success"
                   >
                     <Github size={14} />
                     <span>Generate PR ({appliedRefactors.length})</span>
@@ -190,6 +296,24 @@ const App: React.FC = () => {
         </div>
       </header>
 
+      {/* War Room Alerts */}
+      <div className="fixed bottom-6 right-6 z-[60] flex flex-col gap-2 pointer-events-none">
+        <AnimatePresence>
+          {peerUpdates.map((update, i) => (
+            <motion.div
+              key={`${update.user}-${i}`}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="bg-slate-900 text-white p-4 border-l-4 border-violet-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-3 shadow-xl"
+            >
+              <Activity size={14} className="text-violet-400" />
+              <span>{update.user} refactored {update.file}</span>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
       <main className="relative z-10 py-12 px-6">
         <div className={cn(
           "mx-auto transition-all duration-300",
@@ -197,7 +321,7 @@ const App: React.FC = () => {
         )}>
 
           <AnimatePresence mode="wait">
-            {!projectResult && !result ? (
+            {!projectResult && !result && activeFileIdx !== 'sentinel' ? (
               <motion.div
                 key="upload"
                 initial={{ opacity: 0, y: 10 }}
@@ -212,7 +336,27 @@ const App: React.FC = () => {
                   </div>
                   <h2 className="text-4xl font-bold text-slate-900 tracking-tighter uppercase">Initialize Scan</h2>
                   <div className="h-0.5 w-12 bg-violet-600 my-2" />
-                  <p className="text-slate-500 text-sm max-w-sm">Provide a single source module or a compressed project archive for evaluation.</p>
+                  <p className="text-slate-500 text-sm max-w-sm">Provide a single source module, compressed archive, or connect via Sentinel Mode.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                  <div className="p-8 border border-slate-100 bg-slate-50/50 flex flex-col items-center text-center space-y-4 group hover:border-violet-200 transition-colors">
+                    <Layers size={32} className="text-slate-300 group-hover:text-violet-500 transition-colors" />
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-widest mb-1">Traditional Payload</h4>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">Manual .zip or .py upload</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setActiveFileIdx('sentinel')}
+                    className="p-8 border border-slate-100 bg-slate-50/50 flex flex-col items-center text-center space-y-4 group hover:border-violet-200 transition-colors"
+                  >
+                    <Eye size={32} className="text-slate-300 group-hover:text-violet-500 transition-colors" />
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-widest mb-1">Sentinel Mode</h4>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">Real-time local directory watch</p>
+                    </div>
+                  </button>
                 </div>
 
                 <FileUpload
@@ -221,11 +365,18 @@ const App: React.FC = () => {
                   loading={loading}
                 />
 
+                {streamingStatus && (
+                  <div className="my-6 p-4 bg-violet-50 border border-violet-100 flex items-center gap-4 text-violet-700 text-[10px] font-black uppercase tracking-widest">
+                    <div className="w-3 h-3 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+                    <span>{streamingStatus}</span>
+                  </div>
+                )}
+
                 {error && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="p-4 bg-rose-50 border border-rose-100 flex items-center gap-4 text-rose-800 text-xs font-bold mb-8 uppercase tracking-wide"
+                    className="p-4 bg-rose-50 border border-rose-100 flex items-center gap-4 text-rose-800 text-xs font-bold my-8 uppercase tracking-wide"
                   >
                     <ShieldCheck size={16} />
                     <span>{error}</span>
@@ -236,7 +387,7 @@ const App: React.FC = () => {
                   onClick={handleAnalyze}
                   disabled={!file || loading}
                   className={cn(
-                    "w-full py-5 text-sm font-bold uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-4",
+                    "w-full py-5 text-sm font-bold uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-4 mt-8",
                     !file || loading
                       ? "bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-200"
                       : "bg-slate-900 text-white hover:bg-violet-700 active:scale-[0.99]"
@@ -255,6 +406,62 @@ const App: React.FC = () => {
                   )}
                 </button>
               </motion.div>
+            ) : activeFileIdx === 'sentinel' ? (
+              <motion.div
+                key="sentinel-setup"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white p-16 border border-slate-200 space-y-12"
+              >
+                <div className="flex flex-col gap-2 items-center text-center">
+                  <div className="inline-flex items-center gap-2 text-violet-600 font-bold uppercase text-[10px] tracking-[0.3em]">
+                    <Eye size={12} />
+                    <span>Sentinel Deployment</span>
+                  </div>
+                  <h2 className="text-4xl font-bold text-slate-900 tracking-tighter uppercase">Directory Link</h2>
+                  <p className="text-slate-500 text-sm max-w-sm">Point the engine to your local project folder to enable real-time save-triggered analysis.</p>
+                </div>
+
+                <div className="space-y-4">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] block">Full Directory Path (Absolute)</span>
+                  <input
+                    type="text"
+                    value={sentinelPath}
+                    onChange={(e) => setSentinelPath(e.target.value)}
+                    placeholder="e.g. C:/Users/Docs/Project"
+                    className="w-full px-6 py-5 bg-slate-50 border border-slate-200 font-mono text-sm outline-none focus:border-violet-500 transition-all font-bold"
+                  />
+                </div>
+
+                <div className="flex gap-4">
+                  <button
+                    onClick={isSentinelActive ? stopSentinel : startSentinel}
+                    className={cn(
+                      "flex-1 py-5 text-xs font-black uppercase tracking-[0.3em] flex items-center justify-center gap-4 transition-all",
+                      isSentinelActive ? "bg-rose-600 text-white hover:bg-rose-700" : "bg-slate-900 text-white hover:bg-violet-700"
+                    )}
+                  >
+                    {isSentinelActive ? <Square size={16} fill="white" /> : <Play size={16} fill="white" />}
+                    {isSentinelActive ? "Disable Watcher" : "Activate Sentinel"}
+                  </button>
+                  <button
+                    onClick={() => setActiveFileIdx('dashboard')}
+                    className="px-10 py-5 bg-white border border-slate-200 text-slate-400 text-xs font-black uppercase tracking-[0.2em] hover:bg-slate-50"
+                  >
+                    Back
+                  </button>
+                </div>
+
+                {isSentinelActive && (
+                  <div className="p-6 bg-emerald-50 border border-emerald-100 flex items-start gap-4">
+                    <Wifi size={16} className="text-emerald-600 mt-1" />
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-emerald-800 uppercase tracking-widest">Active Monitoring</p>
+                      <p className="text-xs text-emerald-600 font-medium leading-relaxed">System is now watching {sentinelPath}. Changes to supported code files will update the dashboard instantly.</p>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
             ) : (
               <motion.div
                 key="results"
@@ -264,7 +471,7 @@ const App: React.FC = () => {
               >
                 {projectResult && (
                   <div className="w-full lg:w-72 space-y-2 sticky top-28">
-                    <div className="grid grid-cols-3 bg-white border border-slate-200 p-1 mb-4">
+                    <div className="grid grid-cols-4 bg-white border border-slate-200 p-1 mb-4">
                       <button
                         onClick={() => setActiveFileIdx('dashboard')}
                         className={cn("p-2 transition-all flex items-center justify-center", activeFileIdx === 'dashboard' ? "bg-slate-900 text-white" : "text-slate-400 hover:bg-slate-50")}
@@ -285,6 +492,13 @@ const App: React.FC = () => {
                         title="Policies"
                       >
                         <Settings size={16} />
+                      </button>
+                      <button
+                        onClick={() => setActiveFileIdx('sentinel')}
+                        className={cn("p-2 transition-all flex items-center justify-center", activeFileIdx === 'sentinel' ? "bg-slate-900 text-white" : "text-slate-400 hover:bg-slate-50")}
+                        title="Sentinel Settings"
+                      >
+                        <Eye size={16} />
                       </button>
                     </div>
 
@@ -308,6 +522,7 @@ const App: React.FC = () => {
                           {activeFileIdx === 'dashboard' && <LayoutDashboard size={16} />}
                           {activeFileIdx === 'search' && <Search size={16} />}
                           {activeFileIdx === 'policies' && <Settings size={16} />}
+                          {activeFileIdx === 'sentinel' && <Eye size={16} />}
                           {typeof activeFileIdx === 'number' && <Layers size={16} />}
                         </div>
                         <div className="flex flex-col">
@@ -317,17 +532,26 @@ const App: React.FC = () => {
                           <strong className="text-slate-800 font-bold truncate block max-w-[150px] md:max-w-md uppercase tracking-tighter">
                             {activeFileIdx === 'dashboard' ? 'Insight View' :
                               activeFileIdx === 'search' ? 'Semantic Engine' :
-                                activeFileIdx === 'policies' ? 'Compliance Panel' : (currentResult?.file_name || 'Analysis Output')}
+                                activeFileIdx === 'policies' ? 'Compliance Panel' :
+                                  activeFileIdx === 'sentinel' ? 'Local Watcher' : (currentResult?.file_name || 'Analysis Output')}
                           </strong>
                         </div>
                       </div>
-                      <button
-                        onClick={reset}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-900 text-slate-900 text-[10px] font-bold uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all active:scale-95"
-                      >
-                        <RotateCcw size={14} />
-                        <span>Reset Engine</span>
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {isSentinelActive && (
+                          <div className="hidden lg:flex items-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest border border-emerald-100">
+                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                            Sentinel Live
+                          </div>
+                        )}
+                        <button
+                          onClick={reset}
+                          className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-900 text-slate-900 text-[10px] font-bold uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all active:scale-95"
+                        >
+                          <RotateCcw size={14} />
+                          <span>Reset Engine</span>
+                        </button>
+                      </div>
                     </div>
                   )}
 
