@@ -22,6 +22,7 @@ import { getScoreColor, cn } from '../utils';
 
 interface Props {
     comment: CommentAnalysis;
+    onRefactor?: (original: string, refactored: string) => void;
 }
 
 const ISSUE_DETAILS: Record<string, { category: string, impact: string, rationale: string }> = {
@@ -52,7 +53,7 @@ const ISSUE_DETAILS: Record<string, { category: string, impact: string, rational
     }
 };
 
-const CommentCard: React.FC<Props> = ({ comment }) => {
+const CommentCard: React.FC<Props> = ({ comment, onRefactor }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [copied, setCopied] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -71,6 +72,9 @@ const CommentCard: React.FC<Props> = ({ comment }) => {
     const handleSave = () => {
         setIsSaved(true);
         setIsEditing(false);
+        if (onRefactor) {
+            onRefactor(comment.text, editedText);
+        }
         setTimeout(() => setIsSaved(false), 3000);
     };
 
@@ -98,7 +102,7 @@ const CommentCard: React.FC<Props> = ({ comment }) => {
                 )}
 
                 {hasDebt && (
-                    <div className="flex items-center gap-2 px-2 py-0.5 bg-amber-50 border border-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-widest">
+                    <div className="flex items-center gap-2 px-2 py-0.5 bg-amber-50 border border-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-widest text-center">
                         <Hammer size={10} />
                         <span>Technical Debt</span>
                     </div>

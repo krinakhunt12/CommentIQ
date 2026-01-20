@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import {
-    FileText,
     PieChart,
     CheckCircle2,
     AlertTriangle,
@@ -10,9 +9,7 @@ import {
     BarChart2,
     ShieldAlert,
     Target,
-    ZapOff,
     Lightbulb,
-    Info,
     Map
 } from 'lucide-react';
 import type { AnalysisResult } from '../types';
@@ -124,9 +121,13 @@ const AnalysisSummary: React.FC<Props> = ({ result }) => {
                     </div>
                     <div className="hidden md:block w-px h-32 bg-slate-100" />
                     <div className="w-full md:w-auto flex flex-col items-center justify-center p-4 bg-slate-50 border border-slate-100">
-                        <span className="text-[8px] font-black uppercase text-slate-400 tracking-widest mb-1">Health Index</span>
-                        <span className="text-3xl font-black tracking-tighter" style={{ color: scoreColor }}>{result.overall_score.toFixed(0)}%</span>
-                        <span className="text-[10px] font-bold text-slate-900 uppercase mt-1 tracking-tighter">{scoreLabel}</span>
+                        <div className="flex flex-col items-center">
+                            <span className="text-3xl font-black tracking-tighter" style={{ color: scoreColor }}>{result.overall_score.toFixed(0)}%</span>
+                            <div className="flex flex-col items-center mt-1">
+                                <span className="text-[10px] font-black uppercase text-slate-900 tracking-widest leading-none mb-1">{scoreLabel}</span>
+                                <span className="text-[8px] font-black uppercase text-slate-500 tracking-[0.2em]">Quality Index</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -164,8 +165,8 @@ const AnalysisSummary: React.FC<Props> = ({ result }) => {
                             </div>
                         </div>
                         <div className="text-center">
-                            <span className="text-lg font-bold uppercase tracking-tight" style={{ color: scoreColor }}>{scoreLabel}</span>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 italic">Quality Index</p>
+                            <span className="text-lg font-black uppercase tracking-tight block mb-1" style={{ color: scoreColor }}>{scoreLabel}</span>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Global Quality Index</p>
                         </div>
                     </div>
                 </div>

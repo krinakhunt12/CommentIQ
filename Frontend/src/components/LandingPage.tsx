@@ -9,10 +9,12 @@ import {
     Cpu,
     ArrowRight,
     Github,
-    CheckCircle2,
     Globe,
     Search,
-    Code2
+    Code2,
+    Target,
+    Activity,
+    Layers
 } from 'lucide-react';
 
 interface FeatureProps {
@@ -252,6 +254,73 @@ const LandingPage: React.FC<{ onLaunch: () => void }> = ({ onLaunch }) => {
                                     <span className={cn("text-4xl font-bold tracking-tighter", stat.color)}>{stat.value}</span>
                                 </div>
                             ))}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* About Section */}
+            <section id="about" className="py-24 px-6 border-t border-slate-100 bg-slate-50/20">
+                <div className="max-w-7xl mx-auto">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                        <div className="space-y-8">
+                            <div className="space-y-4">
+                                <h2 className="text-3xl font-bold text-slate-900 tracking-tight uppercase tracking-widest">About CommentIQ</h2>
+                                <div className="h-1 w-12 bg-violet-600" />
+                                <p className="text-slate-600 text-lg leading-relaxed font-medium">
+                                    We believe that technical documentation is a core component of the software's binary state, not an optional secondary artifact.
+                                </p>
+                            </div>
+
+                            <div className="space-y-6">
+                                <div className="flex gap-4">
+                                    <div className="mt-1 p-2 bg-white border border-slate-100 text-violet-600 shrink-0">
+                                        <Target size={18} />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-sm font-bold text-slate-900 uppercase tracking-tight">Our Mission</h4>
+                                        <p className="text-slate-500 text-sm leading-relaxed">To automate the alignment between human explanation and machine execution, reducing technical debt and onboarding gravity.</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-4">
+                                    <div className="mt-1 p-2 bg-white border border-slate-100 text-violet-600 shrink-0">
+                                        <Activity size={18} />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-sm font-bold text-slate-900 uppercase tracking-tight">Analytical Philosophy</h4>
+                                        <p className="text-slate-500 text-sm leading-relaxed">We utilize semantic graph analysis to treat code comments as testable assertions rather than static text.</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-4">
+                                    <div className="mt-1 p-2 bg-white border border-slate-100 text-violet-600 shrink-0">
+                                        <Layers size={18} />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-sm font-bold text-slate-900 uppercase tracking-tight">Enterprise Scale</h4>
+                                        <p className="text-slate-500 text-sm leading-relaxed">Built for high-velocity teams managing complex polyglot repositories where documentation decay is a critical risk.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="relative">
+                            <div className="absolute inset-0 bg-violet-600/5 -rotate-3 transition-transform hover:rotate-0 duration-500 cursor-default" />
+                            <div className="relative bg-white border border-slate-200 p-8 space-y-6">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Code2 size={16} className="text-violet-600" />
+                                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Architectural Manifesto</span>
+                                </div>
+                                <blockquote className="text-xl font-bold italic text-slate-900 leading-tight">
+                                    "When documentation drifts from code, it ceases to be a guide and becomes a liability. CommentIQ is the sentinel that prevents that drift."
+                                </blockquote>
+                                <div className="flex items-center gap-4 pt-4 border-t border-slate-100">
+                                    <div className="w-10 h-10 bg-slate-100 rounded-full" />
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-900 uppercase tracking-tight">Krina Khunt</p>
+                                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Lead Systems Architect</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

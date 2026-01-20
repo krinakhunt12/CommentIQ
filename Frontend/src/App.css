@@ -1,10 +1,45 @@
 @import "tailwindcss";
 
 /* 
-  Most styles have been migrated to the Tailwind utility classes in the components.
-  This file is kept for global transitions or utility overrides if needed.
+  Custom scrollbar for the PR Mockup and searchable lists 
 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
 
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+
+/* Base layouts */
 .main-content {
   min-height: calc(100vh - 200px);
+}
+
+/* Pulse animation for the Git button when changes are pending */
+@keyframes pulse-emerald {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.animate-pulse-success {
+  animation: pulse-emerald 2s infinite;
 }

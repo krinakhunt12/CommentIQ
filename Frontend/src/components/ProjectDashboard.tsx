@@ -6,13 +6,10 @@ import {
     Trophy,
     Code2,
     TrendingUp,
-    CheckCircle2,
-    XCircle,
     ChevronRight,
-    Search
 } from 'lucide-react';
 import type { ProjectAnalysisResult } from '../types';
-import { getScoreColor, cn } from '../utils';
+import { getScoreColor, getScoreLabel, cn } from '../utils';
 
 interface Props {
     project: ProjectAnalysisResult;
@@ -64,7 +61,10 @@ const ProjectDashboard: React.FC<Props> = ({ project, onFileSelect }) => {
                         <span className="text-4xl font-black tracking-tighter" style={{ color: getScoreColor(project.overall_score) }}>
                             {project.overall_score.toFixed(0)}%
                         </span>
-                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest mt-1">Global Health</span>
+                        <div className="flex flex-col items-center mt-1">
+                            <span className="text-[10px] font-black uppercase text-slate-900 tracking-widest">{getScoreLabel(project.overall_score)}</span>
+                            <span className="text-[8px] font-black uppercase text-slate-400 tracking-[0.2em] mt-0.5">Global Index</span>
+                        </div>
                     </div>
                 </div>
             </div>
